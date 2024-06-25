@@ -1,0 +1,42 @@
+---
+name: Building AMI on Merge with Main
+
+env:
+  AWS_REGION: ${{secrets.AWS_REGION}}
+  AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+  AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+  DH_USERNAME: ${{secrets.DH_USERNAME}}
+  DH_TOKEN: ${{secrets.DH_TOKEN}}
+  GH_USERNAME: ${{secrets.GH_USERNAME}}
+  GH_TOKEN: ${{secrets.GH_TOKEN}}
+"on":
+  push:
+    branches: [main]
+
+jobs:
+  ami_creation_job:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setting up Hashicorp Packer
+        uses: hashicorp-contrib/setup-packer@v3
+        with:
+          packer-version: 1.10.3
+
+      - name: Setting packer logs to Verbose
+        run: export PACKER_LOG=1
+
+      - name: Download Packer plugin libraries
+        run: packer init ami.pkr.hcl
+
+      - name: Packer template validation
+        run: packer validate ami.pkr.hcl
+
+      - name: Building Packer Template
+        run: |
+          packer build \
+            -var "DH_USERNAME=${{secrets.DH_USERNAME}}" \
+            -var "DH_TOKEN=${{secrets.DH_TOKEN}}" \
+            -var "GH_USERNAME=${{secrets.GH_USERNAME}}" \
+            -var "GH_TOKEN=${{secrets.GH_TOKEN}}" \
+            ami.pkr.hcl
